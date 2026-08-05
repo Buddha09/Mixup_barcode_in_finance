@@ -6,43 +6,6 @@
  Consolidated, reproducible pipeline for S&P 500 (SPY) and Bitcoin (BTC-USD)
 ================================================================================
 
-Single-file replacement for TDA_Stress_GC_NotebookV2{,_SPY,_BTC}.ipynb.
-Runs in VS Code (Run Python File), from a terminal, or via the `#%%` cell
-markers if you prefer the interactive window.
-
-    python tda_stress_gc.py --asset all --stage all
-    python tda_stress_gc.py --asset spy --stage backtest
-    python tda_stress_gc.py --smoke                # offline self-test
-
---------------------------------------------------------------------------------
-CHANGES RELATIVE TO THE ORIGINAL NOTEBOOKS  (see MANUSCRIPT_EDITS.md)
---------------------------------------------------------------------------------
-[A1] Per-asset embedding parameters are now declared explicitly and are the
-     argmax of the in-sample Sharpe grid search.  This is stated, not hidden.
-         SPY : window=90, dimension=4, delay=3
-         BTC : window=60, dimension=4, delay=2
-[A2] A *single* grid definition (w in {30,45,60,90}, d in {2,3,4},
-     tau in {1..6}; 72 configs/asset) now feeds BOTH the appendix heatmaps and
-     the selection of the main-text configuration, so Fig. 3 and Tables 1-2 are
-     guaranteed mutually consistent.
-[A3] One frozen CFG, one deterministic run.  All randomness is seeded
-     (subsample seed, ML seed, bootstrap seed).  Every table is written to disk.
-[C1] Transaction cost corrected to 5 bps ONE-WAY, charged on |delta position|.
-[C2] No 2% turnover filter is implemented (the manuscript sentence is deleted).
-[C5] Trade counting now reports BOTH `n_signals` (entries+exits, the old
-     `count_trades`) and `n_round_trips` (entries only).
-[E1] Transaction cost is now lagged consistently with the position lag.
-[E2] ML horizon bug fixed (was passing CFG['ml']['seed']=42 as the horizon).
-[E3] Walk-forward / Diebold-Mariano / block bootstrap now actually run.
-[E4] `macd_adx` renamed `macd_rsi` (it never computed ADX).
-[E5] Stray `5` statement in the grid-search cell removed.
-[D ] New `robustness` stage: reference-window sweep, current-window sweep,
-     weight perturbation, and threshold grid.
-
-Parallelism (joblib): per-day stress components, grid-search configurations,
-walk-forward folds, robustness re-runs and bootstrap replicates.  Nested
-parallelism is suppressed (inner n_jobs=1 whenever an outer loop is parallel).
---------------------------------------------------------------------------------
 """
 
 from __future__ import annotations
@@ -461,20 +424,11 @@ def diagram_summary(dgm0: np.ndarray, dgm1: np.ndarray) -> dict:
         "max_pers_h1": float((dgm1[:, 1] - dgm1[:, 0]).max()) if dgm1.size else 0.0,
     }
 
-
+"""
 # ------------------------------------------------------------------------------
 # 3b. Mixup barcode -- Algorithm 2 of Wagner, Arustamyan, Wheeler & Bubenik (2024)
 # ------------------------------------------------------------------------------
-# We do NOT match bars heuristically.  We build the union filtration VR(A u B)
-# once, embed the boundary matrix of VR(A) in the union's index space (B_L), take
-# the union's own boundary matrix (B_K), permute rows so that A-simplices precede
-# B-simplices, and reduce both matrices over Z_2.  Because the row order puts A
-# first, the pivot of a killing simplex in the reduced B_K points at exactly the
-# A-simplex whose image class it destroys -- this is the canonical matching of
-# Theorem 1, so births in VR(A) are paired with their images in VR(A u B) with no
-# tolerance parameter anywhere.  Ripser is used only for the marginal H0/H1
-# diagrams, never for the mixup step. [B10]
-
+"""
 def _build_sparse_columns(cloud_a: np.ndarray, cloud_b: np.ndarray,
                           max_edge_length: float, max_dim: int = 2):
     """Union filtration + sparse Z_2 boundary columns for B_K and B_L.
@@ -616,15 +570,11 @@ def mixup_barcode_distance(cloud_a: np.ndarray, cloud_b: np.ndarray,
         return 0.0
     return float(np.clip(np.mean(pcts), 0.0, 1.0))
 
-
+"""
 # ==============================================================================
 # 4. STRESS PIPELINE
 # ==============================================================================
-# Design note: raw component extraction (expensive, ~O(days) Ripser + Algorithm-2
-# calls) is SEPARATED from scoring (weights, normalisation, smoothing, which are
-# pennies).  That split is what makes the weight/threshold robustness sweeps in
-# stage `robustness` essentially free -- they reuse one component frame. [D]
-
+"""
 def _embed_and_persist(prices_window: np.ndarray, dimension: int, delay: int,
                        max_points: int, max_edge_length: float,
                        subsample_seed: int) -> dict:
@@ -667,7 +617,7 @@ class TDAStressPipeline:
     `window`-day cloud drawn from the middle of that opening slice -- it is NOT a
     120-day cloud, and it is NOT refreshed during the run.
 
-    Scoring [B5][B6][B7]
+    Scoring
     --------------------
       1. all THREE raw components (including MP_1, which is already in [0,1])
          are rescaled by an EXPANDING min-max -- causal, but it means the MP_1
@@ -853,7 +803,7 @@ def compute_portfolio_returns(prices: pd.Series, positions: pd.Series,
                               transaction_cost: float = 0.0005) -> pd.Series:
     """Net daily returns.
 
-    [E1] The position is applied with a one-day lag (trade at the close of t,
+    The position is applied with a one-day lag (trade at the close of t,
     earn the return of t+1).  The COST is now lagged by the same one day, so the
     charge for a trade lands on the first day its exposure is actually held.
     The original code charged an unlagged pos.diff(), misaligning cost and PnL
@@ -1051,9 +1001,9 @@ def run_all_benchmarks(prices: pd.Series, fast: int = 50, slow: int = 200) -> di
             log.warning("Benchmark %s failed: %s", name, exc)
     return out
 
-
+"""
 # ==============================================================================
-# 7. STATISTICAL TESTS
+# 7. STATISTICAL TESTS (Currently under work)
 # ==============================================================================
 
 def diebold_mariano_test(returns_a: pd.Series, returns_b: pd.Series,
