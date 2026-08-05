@@ -154,11 +154,7 @@ smoothing, weights $(0.45, 0.50, 0.05)$.
   `robustness` stages to see the full sensitivity, and `walkforward` for an
   out-of-sample estimate.
 
-## Citation
 
-If this code is useful in your work, please cite the accompanying paper,
-*Mixup Barcodes for Topology-Aware Financial Decision Making*, and the
-underlying method:
 
 > Wagner, H., Arustamyan, N., Wheeler, M., & Bubenik, P. (2024). Mixup
 > barcodes: quantifying geometric-topological interactions between point
